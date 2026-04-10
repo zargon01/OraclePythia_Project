@@ -35,7 +35,7 @@ def _fetch_new_token(headless=True) -> str:
             page.wait_for_timeout(3000)
 
             start = time.time()
-            timeout = 10
+            timeout = 30
 
             while not token_holder["token"]:
                 if time.time() - start > timeout:

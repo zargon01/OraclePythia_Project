@@ -77,15 +77,16 @@ def chat(req: ChatRequest):
             final_query += f"\n\nExisting Code:\n{req.current_code}"
 
         final_query += """
-        
-STRICTLY return ONLY valid JSON.
 DO NOT include markdown, backticks, or extra text.
-
-Format:
+The "code" field in your response MUST contain only the code, without any markdown formatting or explanations.
+Return EXACTLY this JSON format::
 {
-  "code": "...",
-  "explanation": "..."
+  "code": "<string>", 
+  "explanation": "<string>"
 }
+Do not add extra keys.
+Do not escape JSON.
+If code is provided in input, you MUST include it in the output "code" field exactly or improved. Do not omit it.
 """
 
         response = call_chat_api(req.type, final_query)

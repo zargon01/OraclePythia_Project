@@ -26,26 +26,17 @@ def _is_valid_token(token: str) -> bool:
     if token.lower() in ["null", "undefined", ""]:
         return False
 
-    # Remove Bearer prefix if present
     if token.startswith("Bearer "):
         token = token[7:]
 
-    # Basic JWT structure check
     parts = token.split(".")
-    if len(parts) != 3:
-        return False
-
-    return True
+    return len(parts) == 3
 
 
 # ✅ ---------------- AUTH HEADER BUILDER ----------------
 def _build_auth_header(token: str) -> str:
     token = token.strip()
-
-    if token.startswith("Bearer "):
-        return token  # already correct
-
-    return f"Bearer {token}"
+    return token if token.startswith("Bearer ") else f"Bearer {token}"
 
 
 # 🔧 ---------------- GENERIC REQUEST ----------------
@@ -88,7 +79,7 @@ def _make_request(token, query_type, query, space_name, flow_id):
 
 
 # 🔑 ---------------- TOKEN RESOLUTION ----------------
-def _resolve_token(agent_type: str) -> str | None:
+def _resolve_token(agent_type: str, allow_automation=True) -> str | None:
     frontend_token = get_token(agent_type)
 
     logging.info(f"[DEBUG] Raw frontend {agent_type} token: {repr(frontend_token)}")
@@ -97,20 +88,39 @@ def _resolve_token(agent_type: str) -> str | None:
         logging.info(f"✅ Using frontend {agent_type} token")
         return frontend_token
 
-    logging.info(f"⚠️ Invalid/missing frontend {agent_type} token")
+    logging.warning(f"⚠️ Invalid/missing frontend {agent_type} token")
 
-    # Only primary falls back to automation
-    if agent_type == "primary":
-        logging.info("⚙️ Falling back to automation bearer")
+    if not allow_automation:
+        return None
 
+    # 🔁 AUTOMATION FLOW
+    try:
         if not os.path.exists(AUTH_STATE_PATH):
-            logging.warning("⚠️ auth.json missing → starting login flow")
+            logging.warning("⚠️ auth.json missing → refreshing session")
             refresh_session()
 
-            if not os.path.exists(AUTH_STATE_PATH):
-                raise Exception("❌ Failed to generate auth.json")
+        token = get_bearer_token()
 
-        return get_bearer_token()
+        if _is_valid_token(token):
+            logging.info(f"✅ Automation token acquired for {agent_type}")
+            return token
+
+    except Exception as e:
+        logging.warning(f"⚠️ Automation fetch failed: {e}")
+
+        # 🔁 FORCE REFRESH + RETRY
+        try:
+            logging.info("🔄 Refreshing session and retrying token fetch...")
+            refresh_session()
+
+            token = get_bearer_token(force_refresh=True)
+
+            if _is_valid_token(token):
+                logging.info(f"✅ Token acquired after refresh for {agent_type}")
+                return token
+
+        except Exception as e2:
+            logging.error(f"❌ Retry failed: {e2}")
 
     return None
 
@@ -118,67 +128,90 @@ def _resolve_token(agent_type: str) -> str | None:
 # 🚀 ---------------- MAIN FUNCTION ----------------
 def call_chat_api(query_type: str, query: str):
 
-    # 🔹 PRIMARY AGENT
+    # =========================
+    # 🔹 STEP 1: PRIMARY (Frontend → Automation)
+    # =========================
     try:
-        token = _resolve_token("primary")
+        token = _resolve_token("primary", allow_automation=True)
+
+        if token:
+            response = _make_request(token, query_type, query, SPACE_NAME, FLOW_ID)
+
+            if response.ok:
+                logging.info("✅ Primary agent success")
+                return response
+
+            logging.warning(f"⚠️ Primary failed: {response.status_code}")
+
+    except Exception as e:
+        logging.warning(f"⚠️ Primary error: {e}")
+
+    # =========================
+    # 🔹 STEP 2: AGENT 2 (Frontend Token)
+    # =========================
+    try:
+        fallback_token = _resolve_token("fallback", allow_automation=False)
+
+        if fallback_token:
+            logging.info("🔁 Trying Agent 2 with frontend token")
+
+            response = _make_request(
+                fallback_token,
+                query_type,
+                query,
+                AGENT2_SPACE,
+                AGENT2_FLOW
+            )
+
+            if response.ok:
+                logging.info("✅ Agent 2 frontend success")
+                return response
+
+            logging.warning(f"⚠️ Agent 2 frontend failed: {response.status_code}")
+
+    except Exception as e:
+        logging.warning(f"⚠️ Agent 2 frontend error: {e}")
+
+    # =========================
+    # 🔹 STEP 3: AGENT 2 (Automation Token)
+    # =========================
+    try:
+        logging.info("⚙️ Fetching automation token for Agent 2")
+
+        fallback_token = _resolve_token("fallback", allow_automation=True)
+
+        if fallback_token:
+            response = _make_request(
+                fallback_token,
+                query_type,
+                query,
+                AGENT2_SPACE,
+                AGENT2_FLOW
+            )
+
+            if response.ok:
+                logging.info("✅ Agent 2 automation success")
+                return response
+
+    except Exception as e:
+        logging.error(f"❌ Agent 2 automation error: {e}")
+
+    # =========================
+    # 🔥 FINAL GUARANTEE (NEVER FAIL)
+    # =========================
+    try:
+        logging.critical("🚨 FINAL FALLBACK: Forcing fresh session + Agent 1")
+
+        refresh_session()
+        token = get_bearer_token(force_refresh=True)
 
         response = _make_request(token, query_type, query, SPACE_NAME, FLOW_ID)
 
         if response.ok:
-            logging.info("✅ Primary agent success")
+            logging.info("✅ Final fallback success (Agent 1)")
             return response
 
-        # Retry only if using automation token
-        if response.status_code == 401 and not _is_valid_token(get_token("primary")):
-            logging.info("🔄 401 on automation token → refreshing once")
-
-            invalidate_token()
-            token = get_bearer_token(force_refresh=True)
-
-            response = _make_request(token, query_type, query, SPACE_NAME, FLOW_ID)
-
-            if response.ok:
-                logging.info("✅ Primary refresh success")
-                return response
-
-        logging.warning(f"⚠️ Primary failed: {response.status_code}")
-
     except Exception as e:
-        logging.warning(f"⚠️ Primary error: {type(e).__name__}: {e}")
+        logging.critical(f"❌ Final fallback failed: {e}")
 
-    # 🔹 FALLBACK AGENT
-    try:
-        fallback_token = _resolve_token("fallback")
-
-        if not _is_valid_token(fallback_token):
-            raise Exception("No valid fallback token provided")
-
-        logging.info("🔁 Switching to Agent 2")
-
-        # Retry once for timeout
-        for attempt in range(2):
-            try:
-                response = _make_request(
-                    fallback_token,
-                    query_type,
-                    query,
-                    AGENT2_SPACE,
-                    AGENT2_FLOW
-                )
-
-                if response.ok:
-                    logging.info("✅ Fallback agent success")
-                    return response
-
-                logging.error(f"❌ Agent 2 failed: {response.status_code}")
-                break
-
-            except requests.Timeout:
-                logging.warning(f"⏳ Retry {attempt+1} for Agent 2...")
-
-        raise Exception("Fallback agent timeout/failure")
-
-    except Exception as e:
-        logging.error(f"❌ Agent 2 error: {type(e).__name__}: {e}")
-
-    raise Exception("❌ Both agents failed")
+    raise Exception("❌ SYSTEM FAILURE: All fallback strategies exhausted")
