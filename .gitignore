@@ -1,0 +1,106 @@
+# =========================
+# Python / FastAPI
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+.venv/
+ENV/
+env/
+
+# Environment variables
+.env
+.env.*
+
+# Packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs
+*.log
+
+# Test / coverage
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+
+# Mypy / type checkers
+.mypy_cache/
+.dmypy.json
+
+# FastAPI / Uvicorn
+*.db
+*.sqlite3
+
+# =========================
+# Playwright
+# =========================
+# Playwright test results
+playwright-report/
+test-results/
+blob-report/
+
+# Browsers downloaded by Playwright
+ms-playwright/
+
+# Videos / traces
+*.zip
+*.trace
+*.har
+
+# =========================
+# Node / React
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+build/
+dist/
+
+# React environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Misc
+# =========================
+*.bak
+*.tmp
+*.temp
+
+# =========================
+# Docker (if used)
+# =========================
+docker-compose.override.yml
+
+# =========================
+# Git
+# =========================
+*.orig
