@@ -15,7 +15,7 @@ An AI-powered scripting assistant that converts plain English business rules int
 > ✓ 60% reduction in Dev Speed
 > ✓ Conversion from Plain English to Formula
 
-Writing Oracle Fast Formulas and Groovy scripts is a highly specialised, time-consuming skill. Developers must understand both the business rule and the exact syntax of the target scripting language — a context switch that slows every customisation cycle. Oracle Pythia eliminates that gap: describe what you want in plain English, get production-ready code back in seconds, with a full explanation alongside it.
+Writing Oracle Fast Formulas and Groovy scripts is a highly specialised, time-consuming skill. Developers must understand both the business rule and the exact syntax of the target scripting language — a context switch that slows every customisation cycle. This project eliminates that gap: describe what you want in plain English, get production-ready code back in seconds, with a full explanation alongside it.
 
 ---
 
