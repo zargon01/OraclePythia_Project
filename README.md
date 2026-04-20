@@ -2,7 +2,7 @@
 
 > **LTIMindtree Blueverse Hackathon Project**
 
-An AI-powered scripting assistant that converts plain English business rules into Oracle Fast Formulas, Groovy scripts, and JDE Business Function code — and explains existing customisations for impact analysis. Built to deliver a **60% reduction in custom development time** for Oracle HCM and Fusion environments.
+An AI-powered scripting assistant that converts plain English business rules into Oracle Fast Formulas, Groovy scripts, and JDE Business Function code and explains existing customisations for impact analysis. Built to deliver a **60% reduction in custom development time** for Oracle HCM and Fusion environments.
 
 ---
 
@@ -19,7 +19,7 @@ Writing Oracle Fast Formulas and Groovy scripts is a highly specialised, time-co
 
 ---
 
-## What Oracle Pythia Does
+## What this project Does
 
 | Capability | Description |
 |------------|-------------|
@@ -36,6 +36,9 @@ Writing Oracle Fast Formulas and Groovy scripts is a highly specialised, time-co
 - [What Oracle Pythia Does](#what-oracle-pythia-does)
 - [Project Structure](#project-structure)
 - [How It Works](#how-it-works)
+- [Assumptions](#assumptions)
+- [Limitations](#limitations)
+- [Environment-Specific-Configuration]()
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Setup & Installation](#setup--installation)
@@ -64,17 +67,18 @@ OraclePythia/
 │   ├── main.py                      # App entry point — routes and request handling
 │   ├── config.py                    # All configuration (URLs, agent IDs, timeouts)
 │   ├── requirements.txt             # Python dependencies
+│   ├── readme.md                    # Backend Documentation
 │   │
 │   ├── auth/
-│   │   ├── token_store.py           # In-memory token store with TTL + JWT validation
 │   │   ├── bearer.py                # Playwright — captures bearer tokens headlessly
-│   │   └── session.py               # Interactive login — saves browser session to disk
+│   │   ├── session.py               # Interactive login — saves browser session to disk
+│   │   └── token_store.py           # In-memory token store with TTL + JWT validation
 │   │
 │   ├── agents/
 │   │   └── runner.py                # Fallback chain — token selection and API calls
 │   │
 │   └── state/
-│       └── auth.json                # Saved browser session (auto-created, git-ignored)
+│       └── auth.json                # Saved browser session
 │
 └── README.md                        # This file
 ```
@@ -104,7 +108,46 @@ User describes a business rule in plain English
     Frontend displays generated code + explanation side by side
 ```
 
-The backend maintains two Blueverse AI agents. If the primary agent's token is expired or the agent is unavailable, the backend automatically tries the fallback agent — and if that also fails, it silently captures a fresh token using a headless Playwright browser session. The whole fallback chain is invisible to the user.
+The backend maintains two Blueverse AI agents. If the primary agent's is unavailable, the backend automatically tries the fallback agent — and if that also fails, it silently captures a fresh token using a headless Playwright browser session. The whole fallback chain is invisible to the user.
+
+---
+
+## Assumptions
+
+The system is designed with the following assumptions in mind:
+
+- Business requirements are provided clearly.
+- Standard Oracle environment design patterns and conventions are followed.
+- Variable names, dimension names, and members referenced in inputs are valid.
+- Generated code is reviewed and validated by domain consultants before being used in production.
+- The solution is intended as a **productivity accelerator**, not a full automation replacement for developers.
+- The upstream Blueverse API is stable and does not exhibit frequent failures or inconsistent behavior.
+
+---
+
+## Limitations
+While the system is robust in handling token management and fallback strategies, the following limitations apply:
+
+- **No autonomous validation of business logic**  
+  The system does not verify whether generated code aligns perfectly with business intent — human validation is required
+
+- **Dependency on external API (Blueverse)**  
+  Any latency, downtime, or inconsistency in the Blueverse API directly impacts response quality and availability
+
+- **Token dependency**  
+  System performance is optimal when valid frontend tokens are supplied; reliance on Playwright automation introduces additional latency
+
+- **LLM variability**  
+  Outputs may vary slightly for the same input due to inherent probabilistic behavior of LLMs
+
+- **Error handling boundary**  
+  Only HTTP-level failures are handled explicitly — semantic errors in generated code are not automatically detected
+
+---
+
+## Environment-Specific Configuration
+
+The application is environment-aware and relies on centralized configuration defined in `config.py`.
 
 ---
 
@@ -154,9 +197,9 @@ playwright install
 ```
 > Downloads ~150MB of browser binaries. Only needs to be done once per machine.
 
-**4. Save a browser session (required before first run)**
+**4. Save a browser session (optional - before first run)**
 
-This one-time step lets the backend fetch tokens automatically without opening a visible browser on every request. It opens a real browser for you to log in to Blueverse manually.
+This one-time step lets the backend fetch tokens automatically without opening a visible browser on every request.It only needs to be executed for automatic token extraction. It opens a real browser for you to log in to Blueverse manually.
 
 ```bash
 python -m auth.session
@@ -322,7 +365,7 @@ Primary frontend token available?
              └── fail →  ❌ 503 returned to frontend
 ```
 
-The Playwright automation token is cached in memory for 30 minutes. The headless browser only launches when the cache is cold or expired — all other calls just read from memory with no performance cost.
+The Playwright automation token is cached in memory for 20 minutes. The headless browser only launches when the cache is cold or expired — all other calls just read from memory with no performance cost.
 
 ---
 
