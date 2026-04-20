@@ -72,6 +72,11 @@ def _get_automation_token() -> str | None:
     """
     Return a cached Playwright bearer token, fetching a new one if needed.
     Returns None (and logs clearly) if auth.json doesn't exist.
+
+    Retry behaviour:
+      - TimeoutError means the session is expired — fail immediately, no retry.
+        Retrying would just waste another 10s on the same dead session.
+      - Any other exception (crash, network blip) gets one force_refresh retry.
     """
     if not os.path.exists(AUTH_STATE_PATH):
         logger.error(
@@ -81,20 +86,27 @@ def _get_automation_token() -> str | None:
         return None
 
     try:
-        # get_bearer_token() uses its own in-memory cache (TOKEN_TTL)
-        # so this only launches Playwright when the cache is cold/expired
+        # Uses in-memory cache — only launches Playwright when cache is cold/expired
         token = get_bearer_token()
         logger.info("[Runner] Automation token ready (cached or freshly fetched)")
         return token
+    except TimeoutError as e:
+        # Session is expired — retrying will just waste another timeout window
+        logger.error(
+            f"[Runner] Automation timed out: {e} "
+            "Re-run `python -m auth.session` to refresh the session."
+        )
+        return None
     except Exception as e:
-        logger.warning(f"[Runner] Automation fetch failed: {e} — retrying with force_refresh")
+        # Transient error — worth one retry with a clean cache
+        logger.warning(f"[Runner] Automation fetch failed ({e}) — retrying once")
 
     try:
         token = get_bearer_token(force_refresh=True)
         logger.info("[Runner] Automation token ready after force refresh")
         return token
     except Exception as e2:
-        logger.error(f"[Runner] Automation force refresh also failed: {e2}")
+        logger.error(f"[Runner] Automation retry also failed: {e2}")
 
     return None
 

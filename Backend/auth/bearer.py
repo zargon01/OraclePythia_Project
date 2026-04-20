@@ -32,7 +32,7 @@ _token_fetched_at: float   = 0.0
 _lock = threading.Lock()   # prevents parallel Playwright launches
 
 # How long to wait for the page to emit a Bearer token before giving up
-_CAPTURE_TIMEOUT_SECONDS = 30
+_CAPTURE_TIMEOUT_SECONDS = 10
 
 
 def _launch_and_capture_token() -> str:
