@@ -8,7 +8,7 @@ A FastAPI server that wraps the Blueverse chat API. It handles authentication au
 
 - [Project Structure](#project-structure)
 - [File Reference](#file-reference)
-- [How It Works](#how-it-works)
+- [How sa as It Works](#how-it-works)
 - [Fallback Strategy](#fallback-strategy)
 - [Token Lifecycle](#token-lifecycle)
 - [API Endpoints](#api-endpoints)
@@ -25,6 +25,8 @@ Backend/
 │
 ├── main.py                  # FastAPI app — routes, schemas, request handling
 ├── config.py                # All configuration (URLs, agent IDs, timeouts)
+├── requirements.txt         # Python dependencies
+├── readme.md                # Backend Documentation
 │
 ├── auth/
 │   ├── token_store.py       # In-memory token store with TTL expiry + JWT validation
@@ -115,8 +117,6 @@ main.py
    ▼
 Frontend  ← { status, code, explanation, model, response_time, backend_time }
 ```
-
----
 
 ## Fallback Strategy
 
