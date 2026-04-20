@@ -189,7 +189,7 @@ Both servers need to run simultaneously. Open two terminals.
 **Terminal 1 — Start the backend**
 ```bash
 cd backend
-uvicorn main:app
+python -m uvicorn main:app
 ```
 Backend runs on → `http://127.0.0.1:8000`
 
