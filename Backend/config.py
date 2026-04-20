@@ -28,5 +28,5 @@ FALLBACK_SPACE_NAME = "BackupAgent_d8544a5f"
 FALLBACK_FLOW_ID    = "69d3bae8ea80f1bdfe45e207"
 
 # ── Token Settings ─────────────────────────────────────────────────────────────
-TOKEN_TTL       = 1800  # seconds — cached bearer token is reused for 30 minutes
+TOKEN_TTL       = 1200  # seconds — cached bearer token is reused for 30 minutes
 REQUEST_TIMEOUT = 120  # seconds — the chat API can be slow; 2 minutes per attempt
